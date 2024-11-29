@@ -1,0 +1,56 @@
+import org.opencv.core.*;
+import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.face.FaceRecognizer;
+import org.opencv.face.EigenFaceRecognizer;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class FaceDetectionAndRecognition {
+
+static {
+System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+}
+
+public static void main(String[] args) {
+CascadeClassifier faceDetector = new CascadeClassifier("haarcascade_frontalface_default.xml");
+
+String[] imagePaths = {
+"path/to/person1.jpg",
+"path/to/person2.jpg"
+};
+int[] labels = {0, 1};
+List<Mat> images = new ArrayList<>();
+
+for (String imagePath : imagePaths) {
+Mat image = Imgcodecs.imread(imagePath);
+if (!image.empty()) {
+images.add(image);
+}
+}
+
+FaceRecognizer faceRecognizer = EigenFaceRecognizer.create();
+Mat labelsMat = new Mat(new MatOfInt(labels));
+faceRecognizer.train(new MatVector(images.toArray(new Mat[0])), labelsMat);
+
+Mat testImage = Imgcodecs.imread("path/to/test_image.jpg"); // Image for testing
+Mat grayImage = new Mat();
+Imgproc.cvtColor(testImage, grayImage, Imgproc.COLOR_BGR2GRAY)
+
+MatOfRect faceDetections = new MatOfRect();
+faceDetector.detectMultiScale(grayImage, faceDetections);
+
+for (Rect rect : faceDetections.toArray()) {
+Imgproc.rectangle(testImage, new Point(rect.x, rect.y), new Point(rect.x + rect.width, rect.y + rect.height), new Scalar(0, 255, 0));
+Mat face = new Mat(grayImage, rect);
+int predictedLabel = faceRecognizer.predictLabel(face);
+System.out.println("Predicted label: " + predictedLabel);
+Imgproc.putText(testImage, "Label: " + predictedLabel, new Point(rect.x, rect.y - 10), Imgproc.FONT_HERSHEY_SIMPLEX, 0.8, new Scalar(0, 255, 0), 2);
+}
+
+Imgcodecs.imwrite("path/to/output.jpg", testImage);
+System.out.println("Processed image with detections has been saved.");
+}
+}
